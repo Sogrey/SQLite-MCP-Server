@@ -1,8 +1,7 @@
 from fastmcp import FastMCP
 # 统一使用基于项目根目录的绝对导入
-# 使用相对导入
-from config import Config
-from tools.crud import execute_sql
+from app.config import Config
+from app.tools.crud import execute_sql
 
 def setup_server():
     """设置并返回MCP服务器实例"""
@@ -10,7 +9,7 @@ def setup_server():
     mcp = FastMCP('sqlite-mcp')
     
     # 注册工具
-    mcp.tool()(execute_sql)
+    mcp.register_tool(execute_sql)
     
     return mcp
 

@@ -1,6 +1,6 @@
-from database import get_conn
+from app.database import get_conn
 import re
-from typing import List
+from typing import List, Dict, Any, Optional, Union
 
 class SQLUtils:
     """通用SQL工具类，提供SQL执行和验证功能"""
@@ -40,11 +40,13 @@ class SQLUtils:
         return True
 
     @staticmethod
-    def execute_query(query: str) -> dict:
+    def execute_query(query: str, parameters: Optional[List[Any]] = None, timeout: Optional[float] = None) -> Dict[str, Any]:
         """执行SQL查询并返回结果
         
         Args:
             query: SQL查询字符串
+            parameters: 查询参数列表，用于参数化查询防止SQL注入
+            timeout: 查询超时时间（秒）
             
         Returns:
             执行结果字典，包含:
@@ -53,9 +55,9 @@ class SQLUtils:
             - data: 查询结果(仅SELECT)
             - rows_affected: 影响行数
         """
-        conn, cursor = get_conn()
+        conn, cursor = get_conn(timeout=int(timeout) if timeout else 5)
         try:
-            cursor.execute(query)
+            cursor.execute(query, parameters if parameters else ())
             
             # 判断操作类型
             match = re.match(r'^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE)\s+', query.upper())

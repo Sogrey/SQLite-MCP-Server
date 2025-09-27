@@ -1,23 +1,6 @@
-from typing import Dict, Any, List, Union
-import xml.etree.ElementTree as ET
-from models.sql_utils import SQLUtils
-
-def parse_params(params: Union[Dict[str, str], str]) -> str:
-    """解析参数，支持字典和XML格式
-    
-    Args:
-        params: 可以是字典或XML字符串
-        
-    Returns:
-        str: 提取的SQL查询字符串
-    """
-    if isinstance(params, str):
-        try:
-            root = ET.fromstring(params)
-            return root.findtext("query", "").strip()
-        except ET.ParseError:
-            return ""
-    return params.get("query", "")
+from typing import Dict, Any, List, Union, Optional
+import json
+from app.models.sql_utils import SQLUtils
 
 def execute_sql(params: Union[str, Dict]) -> Dict[str, Any]:
     """执行SQL查询
@@ -41,11 +24,34 @@ def execute_sql(params: Union[str, Dict]) -> Dict[str, Any]:
                - 如果是字符串，必须是有效的JSON格式
                - 必须包含"query"字段
                - "parameters"和"timeout"为可选字段
-               
+
     Returns:
         执行结果字典
     """
-    query = params
+    # 解析参数
+    query = ""
+    parameters = []
+    timeout = None
+    
+    # 处理字符串参数（JSON格式）
+    if isinstance(params, str):
+        try:
+            # 尝试解析JSON
+            params_dict = json.loads(params)
+            query = params_dict.get("query", "")
+            parameters = params_dict.get("parameters", [])
+            timeout = params_dict.get("timeout")
+        except json.JSONDecodeError:
+            return {"success": False, "message": "无效的JSON格式"}
+    # 处理字典参数
+    elif isinstance(params, dict):
+        query = params.get("query", "")
+        parameters = params.get("parameters", [])
+        timeout = params.get("timeout")
+    else:
+        return {"success": False, "message": "无效的参数类型"}
+    
+    # 验证查询
     if not query:
         return {"success": False, "message": "无效的SQL查询"}
     
@@ -61,4 +67,5 @@ def execute_sql(params: Union[str, Dict]) -> Dict[str, Any]:
     if not SQLUtils.validate_sql(query, allowed):
         return {"success": False, "message": "SQL验证失败"}
     
-    return SQLUtils.execute_query(query)
+    # 执行查询
+    return SQLUtils.execute_query(query, parameters, timeout)
